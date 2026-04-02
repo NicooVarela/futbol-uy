@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// CONFIGURACIÓN GLOBAL
+// ─────────────────────────────────────────
+
+model Config {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("config")
+}
+
+// ─────────────────────────────────────────
+// TORNEOS Y TEMPORADAS
+// ─────────────────────────────────────────
+
+model Tournament {
+  id                 Int      @id @default(autoincrement())
+  sofascoreId        Int      @unique
+  name               String
+  nameOverride       String?
+  slug               String   @unique
+  category           String   @default("uruguay")
+  format             String   @default("league")
+  gender             String   @default("M")
+  isActive           Boolean  @default(true)
+  manuallyOverridden Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  seasons  Season[]
+  assets   Asset[]  @relation("TournamentAssets")
+
+  @@map("tournaments")
+}
+
+model Season {
+  id               Int      @id @default(autoincrement())
+  sofascoreId      Int      @unique
+  tournamentId     Int
+  year             String
+  name             String
+  isCurrent        Boolean  @default(false)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tournament Tournament  @relation(fields: [tournamentId], references: [id])
+  events     Event[]
+  standings  Standing[]
+
+  @@map("seasons")
+}
+
+// ─────────────────────────────────────────
+// EQUIPOS Y ESTADIOS
+// ─────────────────────────────────────────
+
+model Stadium {
+  id          Int      @id @default(autoincrement())
+  sofascoreId Int?     @unique
+  name        String
+  city        String?
+  capacity    Int?
+  latitude    Float?
+  longitude   Float?
+  country     String   @default("Uruguay")
+  createdAt   DateTime @default(now())
+
+  teams  Team[]
+  events Event[]
+
+  @@map("stadiums")
+}
+
+model Team {
+  id                 Int      @id @default(autoincrement())
+  sofascoreId        Int      @unique
+  name               String
+  nameOverride       String?
+  slug               String   @unique
+  shortName          String?
+  nameCode           String?
+  country            String   @default("Uruguay")
+  gender             String   @default("M")
+  foundedYear        Int?
+  primaryColor       String?
+  secondaryColor     String?
+  stadiumId          Int?
+  managerName        String?
+  isActive           Boolean  @default(true)
+  manuallyOverridden Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  stadium      Stadium?      @relation(fields: [stadiumId], references: [id])
+  players      Player[]
+  homeEvents   Event[]       @relation("HomeTeam")
+  awayEvents   Event[]       @relation("AwayTeam")
+  standings    Standing[]
+  assets       Asset[]       @relation("TeamAssets")
+  incidents    Incident[]
+
+  @@map("teams")
+}
+
+// ─────────────────────────────────────────
+// JUGADORES
+// ─────────────────────────────────────────
+
+model Player {
+  id                 Int      @id @default(autoincrement())
+  sofascoreId        Int      @unique
+  name               String
+  nameOverride       String?
+  slug               String?
+  position           String?
+  nationality        String?
+  dateOfBirth        DateTime?
+  height             Int?
+  preferredFoot      String?
+  shirtNumber        Int?
+  teamId             Int?
+  manuallyOverridden Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  team      Team?      @relation(fields: [teamId], references: [id])
+  lineups   Lineup[]
+  incidents Incident[]
+  assets    Asset[]    @relation("PlayerAssets")
+
+  @@map("players")
+}
+
+// ─────────────────────────────────────────
+// PARTIDOS
+// ─────────────────────────────────────────
+
+model Event {
+  id            Int      @id @default(autoincrement())
+  sofascoreId   Int      @unique
+  seasonId      Int
+  homeTeamId    Int
+  awayTeamId    Int
+  homeScore     Int?
+  awayScore     Int?
+  homeScoreHt   Int?
+  awayScoreHt   Int?
+  status        String   @default("notstarted")
+  startTime     DateTime
+  round         Int?
+  stadiumId     Int?
+  refereeName   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  season    Season     @relation(fields: [seasonId], references: [id])
+  homeTeam  Team       @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam  Team       @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  stadium   Stadium?   @relation(fields: [stadiumId], references: [id])
+  incidents Incident[]
+  lineups   Lineup[]
+
+  @@map("events")
+}
+
+// ─────────────────────────────────────────
+// INCIDENCIAS (goles, tarjetas, cambios)
+// ─────────────────────────────────────────
+
+model Incident {
+  id           Int      @id @default(autoincrement())
+  sofascoreId  Int?
+  eventId      Int
+  type         String
+  minute       Int?
+  extraMinute  Int?
+  playerId     Int?
+  teamId       Int?
+  teamSide     String?
+  description  String?
+  homeScore    Int?
+  awayScore    Int?
+  createdAt    DateTime @default(now())
+
+  event  Event   @relation(fields: [eventId], references: [id])
+  player Player? @relation(fields: [playerId], references: [id])
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  @@map("incidents")
+}
+
+// ─────────────────────────────────────────
+// FORMACIONES
+// ─────────────────────────────────────────
+
+model Lineup {
+  id           Int      @id @default(autoincrement())
+  eventId      Int
+  playerId     Int
+  teamSide     String
+  position     String?
+  jerseyNumber Int?
+  isStarter    Boolean  @default(true)
+  rating       Float?
+  createdAt    DateTime @default(now())
+
+  event  Event  @relation(fields: [eventId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([eventId, playerId])
+  @@map("lineups")
+}
+
+// ─────────────────────────────────────────
+// TABLA DE POSICIONES
+// ─────────────────────────────────────────
+
+model Standing {
+  id           Int      @id @default(autoincrement())
+  seasonId     Int
+  teamId       Int
+  position     Int
+  played       Int      @default(0)
+  wins         Int      @default(0)
+  draws        Int      @default(0)
+  losses       Int      @default(0)
+  goalsFor     Int      @default(0)
+  goalsAgainst Int      @default(0)
+  points       Int      @default(0)
+  zone         String?
+  updatedAt    DateTime @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id])
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([seasonId, teamId])
+  @@map("standings")
+}
+
+// ─────────────────────────────────────────
+// IMÁGENES
+// ─────────────────────────────────────────
+
+model Asset {
+  id               Int      @id @default(autoincrement())
+  entityType       String
+  assetType        String
+  source           String   @default("sofascore")
+  url              String
+  cloudinaryId     String?
+  width            Int?
+  height           Int?
+  isPrimary        Boolean  @default(true)
+  manuallyUploaded Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  teamId       Int?
+  playerId     Int?
+  tournamentId Int?
+
+  team       Team?       @relation("TeamAssets", fields: [teamId], references: [id])
+  player     Player?     @relation("PlayerAssets", fields: [playerId], references: [id])
+  tournament Tournament? @relation("TournamentAssets", fields: [tournamentId], references: [id])
+
+  @@map("assets")
+}
+
+// ─────────────────────────────────────────
+// SISTEMA — SCRAPER
+// ─────────────────────────────────────────
+
+model DataSource {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  isActive      Boolean  @default(true)
+  priority      Int      @default(1)
+  lastSuccessAt DateTime?
+  lastErrorAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@map("data_sources")
+}
+
+model ScraperLog {
+  id             Int      @id @default(autoincrement())
+  jobName        String
+  status         String
+  sourceUsed     String?
+  recordsUpdated Int      @default(0)
+  errorMessage   String?
+  durationMs     Int?
+  ranAt          DateTime @default(now())
+
+  @@map("scraper_logs")
+}
