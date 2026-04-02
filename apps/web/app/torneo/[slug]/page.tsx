@@ -1,6 +1,7 @@
 import { prisma } from '../../../lib/prisma'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Header from '../../components/Header'
 
 export const revalidate = 300
 
@@ -91,17 +92,7 @@ export default async function TournamentPage({
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
       {/* HEADER */}
-      <header style={{ background: 'var(--bg-header)', borderBottom: '2px solid var(--green-dk)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)', letterSpacing: -0.5 }}>
-          Futbol<span style={{ color: 'var(--white)' }}>UY</span>
-        </Link>
-        <nav style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-          <Link href="/">Inicio</Link>
-          <Link href="/torneo/primera-division" style={{ color: slug === 'primera-division' ? 'var(--green)' : undefined }}>Primera</Link>
-          <Link href="/torneo/copa-uruguay" style={{ color: slug === 'copa-uruguay' ? 'var(--green)' : undefined }}>Copa UY</Link>
-          <Link href="/torneo/segunda-division" style={{ color: slug === 'segunda-division' ? 'var(--green)' : undefined }}>Segunda</Link>
-        </nav>
-      </header>
+      <Header activeSlug={slug} />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16 }}>
 

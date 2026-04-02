@@ -1,6 +1,7 @@
 import { prisma } from '../../../lib/prisma'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Header from '../../components/Header'
 
 export const revalidate = 300
 
@@ -86,16 +87,7 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
       {/* HEADER */}
-      <header style={{ background: 'var(--bg-header)', borderBottom: '2px solid var(--green-dk)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)', letterSpacing: -0.5 }}>
-          Futbol<span style={{ color: 'var(--white)' }}>UY</span>
-        </Link>
-        <nav style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-          <Link href="/">Inicio</Link>
-          <Link href="/torneo/primera-division">Primera</Link>
-          <Link href="/torneo/copa-uruguay">Copa UY</Link>
-        </nav>
-      </header>
+      <Header />
 
       {/* BANNER DEL CLUB */}
       <div style={{ background: `linear-gradient(135deg, ${primaryColor}33, #1a1a1a)`, borderBottom: '1px solid var(--border)', padding: '24px 16px' }}>

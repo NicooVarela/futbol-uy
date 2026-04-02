@@ -3,10 +3,13 @@ import { getSeasons } from '../sources/sofascore'
 import { log, logError } from '../logger'
 
 const URUGUAY_TOURNAMENTS = [
-  { sofascoreId: 278,   name: 'Liga AUF Uruguaya',      slug: 'primera-division',  gender: 'M', format: 'league' },
-  { sofascoreId: 1908,  name: 'Segunda División',        slug: 'segunda-division',  gender: 'M', format: 'league' },
-  { sofascoreId: 18877, name: 'Copa Uruguay',            slug: 'copa-uruguay',      gender: 'M', format: 'cup'    },
-  { sofascoreId: 11705, name: 'Supercopa Uruguaya',      slug: 'supercopa-uruguaya',gender: 'M', format: 'cup'    },
+  { sofascoreId: 278,   name: 'Liga AUF Uruguaya',        slug: 'primera-division',          gender: 'M', format: 'league' },
+  { sofascoreId: 1908,  name: 'Segunda División',          slug: 'segunda-division',          gender: 'M', format: 'league' },
+  { sofascoreId: 18877, name: 'Copa Uruguay',              slug: 'copa-uruguay',              gender: 'M', format: 'cup'    },
+  { sofascoreId: 11705, name: 'Supercopa Uruguaya',        slug: 'supercopa-uruguaya',        gender: 'M', format: 'cup'    },
+  { sofascoreId: 26301, name: 'Liga AUF Femenina',         slug: 'primera-division-femenina', gender: 'F', format: 'league' },
+  { sofascoreId: 31832, name: 'Copa de la Liga',           slug: 'copa-de-la-liga',           gender: 'M', format: 'cup'    },
+  { sofascoreId: 21284, name: 'Primera División Reservas', slug: 'primera-division-reservas', gender: 'M', format: 'league' },
 ]
 
 export async function syncSeasons() {
@@ -33,9 +36,12 @@ export async function syncSeasons() {
       // Traer temporadas de SofaScore
       const seasons = await getSeasons(t.sofascoreId)
       const currentYear = new Date().getFullYear().toString()
+      const lastYear = (new Date().getFullYear() - 1).toString()
 
       for (const s of seasons) {
-        const isCurrent = s.year === currentYear
+        // Es la temporada más reciente del torneo
+        const isCurrent = s.year === currentYear || 
+          (s.year === lastYear && !seasons.some((other: any) => other.year === currentYear))
 
         await prisma.season.upsert({
           where:  { sofascoreId: s.id },

@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma'
 import Link from 'next/link'
+import Header from './components/Header'
 
 export const revalidate = 60
 
@@ -66,17 +67,7 @@ export default async function HomePage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
       {/* HEADER */}
-      <header style={{ background: 'var(--bg-header)', borderBottom: '2px solid var(--green-dk)', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--green)', letterSpacing: -0.5 }}>
-          Futbol<span style={{ color: 'var(--white)' }}>UY</span>
-        </div>
-        <nav style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-muted)' }}>
-          <Link href="/" style={{ color: 'var(--green)' }}>Inicio</Link>
-          <Link href="/torneo/primera-division">Primera</Link>
-          <Link href="/torneo/copa-uruguay">Copa UY</Link>
-          <Link href="/torneo/segunda-division">Segunda</Link>
-        </nav>
-      </header>
+      <Header />
 
       {/* LAYOUT */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16, display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>

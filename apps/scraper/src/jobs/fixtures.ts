@@ -2,10 +2,49 @@ import prisma from '../db'
 import { getLastEvents, getNextEvents } from '../sources/sofascore'
 import { log, logError } from '../logger'
 
-async function upsertEvent(e: any, seasonId: number) {
+async function upsertEvent(e: any, seasonId: number, season?: any) {
   const homeTeam = await prisma.team.findUnique({ where: { sofascoreId: e.homeTeam.id } })
   const awayTeam = await prisma.team.findUnique({ where: { sofascoreId: e.awayTeam.id } })
-  if (!homeTeam || !awayTeam) return false
+
+  // Si el equipo no existe lo creamos básico
+  let homeTeamId = homeTeam?.id
+  let awayTeamId = awayTeam?.id
+
+  if (!homeTeamId) {
+    const baseSlug = e.homeTeam.slug ?? e.homeTeam.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    const slug = season?.tournament?.gender === 'F' ? `${baseSlug}-fem` : `${baseSlug}-${e.homeTeam.id}`
+    const t = await prisma.team.upsert({
+      where:  { sofascoreId: e.homeTeam.id },
+      update: {},
+      create: {
+        sofascoreId: e.homeTeam.id,
+        name:        e.homeTeam.name,
+        slug,
+        shortName:   e.homeTeam.shortName ?? null,
+        nameCode:    e.homeTeam.nameCode ?? null,
+        gender:      'F',
+      },
+    })
+    homeTeamId = t.id
+  }
+
+  if (!awayTeamId) {
+    const baseSlug = e.awayTeam.slug ?? e.awayTeam.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    const slug = season?.tournament?.gender === 'F' ? `${baseSlug}-fem` : `${baseSlug}-${e.awayTeam.id}`
+    const t = await prisma.team.upsert({
+      where:  { sofascoreId: e.awayTeam.id },
+      update: {},
+      create: {
+        sofascoreId: e.awayTeam.id,
+        name:        e.awayTeam.name,
+        slug,
+        shortName:   e.awayTeam.shortName ?? null,
+        nameCode:    e.awayTeam.nameCode ?? null,
+        gender:      'F',
+      },
+    })
+    awayTeamId = t.id
+  }
 
   await prisma.event.upsert({
     where:  { sofascoreId: e.id },
@@ -19,8 +58,8 @@ async function upsertEvent(e: any, seasonId: number) {
     create: {
       sofascoreId:  e.id,
       seasonId,
-      homeTeamId:   homeTeam.id,
-      awayTeamId:   awayTeam.id,
+      homeTeamId,
+      awayTeamId,
       homeScore:    e.homeScore?.current ?? null,
       awayScore:    e.awayScore?.current ?? null,
       homeScoreHt:  e.homeScore?.period1 ?? null,
@@ -36,41 +75,61 @@ async function upsertEvent(e: any, seasonId: number) {
 
 export async function syncFixtures() {
   const start = Date.now()
-  let records = 0
+  let totalRecords = 0
 
   try {
-    log('fixtures', '🔄 Sincronizando fixture...')
+    log('fixtures', '🔄 Sincronizando fixture de todos los torneos...')
 
-    const season = await prisma.season.findFirst({
-      where: { isCurrent: true, tournament: { sofascoreId: 278 } },
+    // Traer todas las temporadas activas
+    const seasons = await prisma.season.findMany({
+      where: { isCurrent: true },
+      include: { tournament: true },
     })
 
-    if (!season) {
-      log('fixtures', '⚠️  No hay temporada actual')
-      return
-    }
+    for (const season of seasons) {
+      let records = 0
 
-    // Últimos partidos (página 0 y 1)
-    for (const page of [0, 1]) {
-      const events = await getLastEvents(278, season.sofascoreId, page)
-      for (const e of events) {
-        const ok = await upsertEvent(e, season.id)
-        if (ok) records++
+      try {
+        // Últimos partidos
+// Últimos partidos — page 0 siempre, page 1 solo si hay suficientes partidos
+        for (const page of [0, 1]) {
+          try {
+            const events = await getLastEvents(season.tournament.sofascoreId, season.sofascoreId, page)
+            if (!events.length) break
+            for (const e of events) {
+              await upsertEvent(e, season.id)
+              records++
+            }
+          } catch (err: any) {
+            if (err.message?.includes('404')) break
+            throw err
+          }
+        }
+
+        // Próximos partidos
+        try {
+          const nextEvents = await getNextEvents(season.tournament.sofascoreId, season.sofascoreId, 0)
+          for (const e of nextEvents) {
+            await upsertEvent(e, season.id, season)
+            records++
+          }
+        } catch (err: any) {
+          if (!err.message?.includes('404')) throw err
+        }
+
+        log('fixtures', `✅ ${season.tournament.name} — ${records} partidos`)
+        totalRecords += records
+
+      } catch (err) {
+        log('fixtures', `⚠️  Error en ${season.tournament.name}: ${String(err)}`)
       }
     }
 
-    // Próximos partidos
-    const nextEvents = await getNextEvents(278, season.sofascoreId, 0)
-    for (const e of nextEvents) {
-      const ok = await upsertEvent(e, season.id)
-      if (ok) records++
-    }
-
     await prisma.scraperLog.create({
-      data: { jobName: 'fixtures', status: 'success', sourceUsed: 'sofascore', recordsUpdated: records, durationMs: Date.now() - start }
+      data: { jobName: 'fixtures', status: 'success', sourceUsed: 'sofascore', recordsUpdated: totalRecords, durationMs: Date.now() - start }
     })
 
-    log('fixtures', `✅ Completado — ${records} partidos sincronizados`)
+    log('fixtures', `✅ Completado — ${totalRecords} partidos sincronizados`)
 
   } catch (err) {
     logError('fixtures', err)
