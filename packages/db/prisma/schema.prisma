@@ -241,12 +241,13 @@ model Standing {
   goalsAgainst Int      @default(0)
   points       Int      @default(0)
   zone         String?
+  group        String? 
   updatedAt    DateTime @updatedAt
 
   season Season @relation(fields: [seasonId], references: [id])
   team   Team   @relation(fields: [teamId], references: [id])
 
-  @@unique([seasonId, teamId])
+  @@unique([seasonId, teamId, group]) 
   @@map("standings")
 }
 

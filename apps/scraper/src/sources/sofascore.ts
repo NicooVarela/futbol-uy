@@ -119,3 +119,12 @@ export async function getLiveEvents() {
   const allEvents = data.events ?? []
   return allEvents.filter((e: any) => e.tournament?.category?.id === 57)
 }
+
+export async function getAllStandingGroups(tournamentId: number, seasonId: number) {
+  const data = await fetchSofascore(`/unique-tournament/${tournamentId}/season/${seasonId}/standings/total`)
+  if (!data.standings?.length) return []
+  return data.standings.map((s: any) => ({
+    groupName: s.name ?? null,
+    rows: s.rows ?? [],
+  }))
+}

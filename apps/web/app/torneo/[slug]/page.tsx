@@ -17,11 +17,19 @@ async function getTournament(slug: string) {
 }
 
 async function getStandings(seasonId: number) {
-  return prisma.standing.findMany({
+  const standings = await prisma.standing.findMany({
     where: { seasonId },
     include: { team: true },
-    orderBy: { position: 'asc' },
+    orderBy: [{ position: 'asc' }],
   })
+
+  const groups: Record<string, typeof standings> = {}
+  for (const s of standings) {
+    const key = (s as any).group ?? 'total'
+    if (!groups[key]) groups[key] = []
+    groups[key].push(s)
+  }
+  return groups
 }
 
 async function getFixture(seasonId: number) {
@@ -75,7 +83,6 @@ export default async function TournamentPage({
     getFixture(currentSeason.id),
   ])
 
-  // Agrupar fixture por fecha
   const rounds = fixture.reduce((acc, match) => {
     const round = match.round ?? 0
     if (!acc[round]) acc[round] = []
@@ -85,13 +92,12 @@ export default async function TournamentPage({
 
   const roundNumbers = Object.keys(rounds).map(Number).sort((a, b) => a - b)
   const selectedRound = fecha ? parseInt(fecha) : roundNumbers[roundNumbers.length - 1]
-
   const currentRoundMatches = rounds[selectedRound] ?? []
+  const hasGroups = Object.keys(standings).length > 1
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
-      {/* HEADER */}
       <Header activeSlug={slug} />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16 }}>
@@ -109,8 +115,6 @@ export default async function TournamentPage({
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--white)' }}>{tournament.name}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Temporada {currentSeason.year}</div>
           </div>
-
-          {/* Selector de temporada */}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
             {tournament.seasons.slice(0, 4).map(s => (
               <Link
@@ -161,55 +165,57 @@ export default async function TournamentPage({
           {tab === 'tabla' && (
             <>
               <div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--bg-card)', borderRadius: 8, overflow: 'hidden' }}>
-                  <thead>
-                    <tr style={{ background: '#1a2e1a' }}>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center', width: 28 }}>#</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'left' }}>Club</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>PJ</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>G</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>E</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>P</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GF</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GC</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GD</th>
-                      <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings.map(s => (
-                      <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', borderLeft: `3px solid ${getZoneColor(s.zone)}` }}>
-                          {s.position}
-                        </td>
-                        <td style={{ padding: '8px 6px' }}>
-                          <Link href={`/club/${s.team.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={`https://api.sofascore.com/api/v1/team/${s.team.sofascoreId}/image`}
-                              alt={s.team.name}
-                              width={20} height={20}
-                              style={{ objectFit: 'contain' }}
-                            />
-                            <span style={{ fontSize: 13, fontWeight: s.position <= 3 ? 600 : 400 }}>
-                              {s.team.name}
-                            </span>
-                          </Link>
-                        </td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.played}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.wins}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.draws}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.losses}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.goalsFor}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.goalsAgainst}</td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: s.goalsFor - s.goalsAgainst > 0 ? 'var(--green-lt)' : s.goalsFor - s.goalsAgainst < 0 ? '#ef9a9a' : 'var(--text-muted)' }}>
-                          {s.goalsFor - s.goalsAgainst > 0 ? '+' : ''}{s.goalsFor - s.goalsAgainst}
-                        </td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--white)' }}>{s.points}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {Object.entries(standings).map(([groupName, rows]) => (
+                  <div key={groupName} style={{ marginBottom: 20 }}>
+                    {hasGroups && (
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)', padding: '5px 8px', background: '#111', borderRadius: '4px 4px 0 0', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                        {groupName.includes('Group') ? groupName.split(',').pop()?.trim() : groupName}
+                      </div>
+                    )}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--bg-card)', borderRadius: hasGroups ? '0 0 6px 6px' : 8, overflow: 'hidden' }}>
+                      <thead>
+                        <tr style={{ background: '#1a2e1a' }}>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center', width: 28 }}>#</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'left' }}>Club</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>PJ</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>G</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>E</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>P</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GF</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GC</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>GD</th>
+                          <th style={{ padding: '8px 6px', fontSize: 11, color: 'var(--text-dim)', fontWeight: 400, textAlign: 'center' }}>Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map(s => (
+                          <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-dim)', borderLeft: `3px solid ${getZoneColor(s.zone)}` }}>
+                              {s.position}
+                            </td>
+                            <td style={{ padding: '8px 6px' }}>
+                              <Link href={`/club/${s.team.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={`https://api.sofascore.com/api/v1/team/${s.team.sofascoreId}/image`} alt={s.team.name} width={20} height={20} style={{ objectFit: 'contain' }} />
+                                <span style={{ fontSize: 13, fontWeight: s.position <= 3 ? 600 : 400 }}>{s.team.name}</span>
+                              </Link>
+                            </td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.played}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.wins}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.draws}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.losses}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.goalsFor}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{s.goalsAgainst}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 12, color: s.goalsFor - s.goalsAgainst > 0 ? 'var(--green-lt)' : s.goalsFor - s.goalsAgainst < 0 ? '#ef9a9a' : 'var(--text-muted)' }}>
+                              {s.goalsFor - s.goalsAgainst > 0 ? '+' : ''}{s.goalsFor - s.goalsAgainst}
+                            </td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--white)' }}>{s.points}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
 
                 {/* Leyenda */}
                 <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-dim)', display: 'flex', gap: 16 }}>
@@ -249,7 +255,6 @@ export default async function TournamentPage({
           {/* FIXTURE COMPLETO */}
           {tab === 'fixture' && (
             <div>
-              {/* Navegador de fechas */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                 {roundNumbers.map(r => (
                   <Link
@@ -269,7 +274,6 @@ export default async function TournamentPage({
                 ))}
               </div>
 
-              {/* Partidos de la fecha seleccionada */}
               <div style={{ background: 'var(--bg-card)', borderRadius: 8, overflow: 'hidden' }}>
                 <div style={{ background: '#1a2e1a', padding: '8px 12px', fontSize: 12, fontWeight: 600, color: 'var(--white)' }}>
                   Fecha {selectedRound}
