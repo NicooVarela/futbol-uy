@@ -15,13 +15,25 @@ async function main() {
   log('main', `🚀 FutbolUY Scraper — job: ${job}`)
 
   try {
-    if (job === 'all' || job === 'seasons')   await syncSeasons()
-    if (job === 'all' || job === 'teams')     await syncTeams()
-    if (job === 'all' || job === 'players')   await syncPlayers()
-    if (job === 'all' || job === 'standings') await syncStandings()
-    if (job === 'all' || job === 'fixtures')  await syncFixtures()
-    if (job === 'match-detail' && arg)        await syncMatchDetail(parseInt(arg))
-    if (job === 'historical') {
+    if (job === 'sync') {
+      await syncSeasons()
+      await syncTeams()
+      await syncPlayers()
+      await syncStandings()
+      await syncFixtures()
+    } else if (job === 'all') {
+      await syncSeasons()
+      await syncTeams()
+      await syncPlayers()
+      await syncStandings()
+      await syncFixtures()
+    } else if (job === 'seasons')      await syncSeasons()
+    else if (job === 'teams')          await syncTeams()
+    else if (job === 'players')        await syncPlayers()
+    else if (job === 'standings')      await syncStandings()
+    else if (job === 'fixtures')       await syncFixtures()
+    else if (job === 'match-detail' && arg) await syncMatchDetail(parseInt(arg))
+    else if (job === 'historical') {
       const fromYear = arg ? parseInt(arg) : 2020
       await syncHistorical(fromYear)
     }

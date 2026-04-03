@@ -10,10 +10,11 @@ interface Props {
 
 export default function SeasonSelector({ seasons, currentSeasonId, slug }: Props) {
   const router = useRouter()
+  const currentSeason = seasons.find(s => s.id === currentSeasonId)
 
   return (
     <select
-      value={currentSeasonId}
+      value={currentSeason?.year ?? ''}
       onChange={(e) => router.push(`/torneo/${slug}?season=${e.target.value}`)}
       style={{
         background: '#1a2e1a',
@@ -27,7 +28,7 @@ export default function SeasonSelector({ seasons, currentSeasonId, slug }: Props
       }}
     >
       {seasons.map(s => (
-        <option key={s.id} value={s.id}>
+        <option key={s.id} value={s.year}>
           {s.year}
         </option>
       ))}

@@ -5,7 +5,7 @@ import Header from './components/Header'
 export const revalidate = 60
 
 async function getStandings() {
-  return prisma.standing.findMany({
+  const all = await prisma.standing.findMany({
     where: {
       season: {
         isCurrent: true,
@@ -15,6 +15,19 @@ async function getStandings() {
     include: { team: true },
     orderBy: { position: 'asc' },
   })
+
+  // Obtener grupos disponibles
+  const groups = [...new Set(all.map(s => (s as any).group ?? 'total'))]
+
+  // Preferir Apertura > Clausura > Anual > total
+  const preferred = ['Apertura', 'Clausura', 'Anual', 'total']
+  let activeGroup = groups[0]
+  for (const p of preferred) {
+    const match = groups.find(g => g?.includes(p))
+    if (match) { activeGroup = match; break }
+  }
+
+  return all.filter(s => ((s as any).group ?? 'total') === activeGroup)
 }
 
 async function getRecentMatches() {
@@ -65,11 +78,7 @@ export default async function HomePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-
-      {/* HEADER */}
       <Header />
-
-      {/* LAYOUT */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16, display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
 
         {/* PARTIDOS */}
@@ -77,7 +86,6 @@ export default async function HomePage() {
           <div style={{ background: '#1f3a22', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontWeight: 600, fontSize: 13, color: 'var(--white)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             🇺🇾 Liga AUF Uruguaya 2026
           </div>
-
           {Object.entries(matchesByDate).map(([date, dayMatches]) => (
             <div key={date} style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', padding: '4px 0', borderBottom: '1px solid var(--border)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -137,13 +145,7 @@ export default async function HomePage() {
                   <td style={{ padding: '5px 4px', fontSize: 12 }}>
                     <Link href={`/club/${s.team.slug}`} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`https://api.sofascore.com/api/v1/team/${s.team.sofascoreId}/image`}
-                        alt={s.team.name}
-                        width={16}
-                        height={16}
-                        style={{ objectFit: 'contain' }}
-                      />
+                      <img src={`https://api.sofascore.com/api/v1/team/${s.team.sofascoreId}/image`} alt={s.team.name} width={16} height={16} style={{ objectFit: 'contain' }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}>
                         {s.team.shortName || s.team.name}
                       </span>
