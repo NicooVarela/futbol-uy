@@ -1,12 +1,14 @@
 import Link from 'next/link'
 
 const TORNEOS = [
-  { slug: 'primera-division',          label: 'Primera',   emoji: '🇺🇾' },
-  { slug: 'segunda-division',          label: 'Segunda',   emoji: '🇺🇾' },
-  { slug: 'copa-uruguay',              label: 'Copa UY',   emoji: '🏆' },
-  { slug: 'primera-division-femenina', label: 'Femenino',  emoji: '⚽' },
-  { slug: 'primera-division-reservas', label: 'Reservas',  emoji: '🔵' },
-  { slug: 'copa-de-la-liga',           label: 'Copa Liga', emoji: '🥈' },
+  { slug: 'primera-division',          label: 'Primera',       emoji: '🇺🇾' },
+  { slug: 'segunda-division',          label: 'Segunda',       emoji: '🇺🇾' },
+  { slug: 'copa-uruguay',              label: 'Copa UY',       emoji: '🏆' },
+  { slug: 'primera-division-femenina', label: 'Femenino',      emoji: '⚽' },
+  { slug: 'primera-division-reservas', label: 'Reservas',      emoji: '🔵' },
+  { slug: 'copa-de-la-liga',           label: 'Copa Liga',     emoji: '🥈' },
+  { slug: 'copa-libertadores',         label: 'Libertadores',  emoji: '🏅' },
+  { slug: 'copa-sudamericana',         label: 'Sudamericana',  emoji: '🥉' },
 ]
 
 export default function Header({ activeSlug }: { activeSlug?: string }) {

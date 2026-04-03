@@ -10,6 +10,8 @@ const URUGUAY_TOURNAMENTS = [
   { sofascoreId: 26301, name: 'Liga AUF Femenina',         slug: 'primera-division-femenina', gender: 'F', format: 'league' },
   { sofascoreId: 31832, name: 'Copa de la Liga',           slug: 'copa-de-la-liga',           gender: 'M', format: 'cup'    },
   { sofascoreId: 21284, name: 'Primera División Reservas', slug: 'primera-division-reservas', gender: 'M', format: 'league' },
+  { sofascoreId: 384, name: 'Copa Libertadores',  slug: 'copa-libertadores',  gender: 'M', format: 'cup', category: 'internacional' },
+  { sofascoreId: 480, name: 'Copa Sudamericana',  slug: 'copa-sudamericana',  gender: 'M', format: 'cup', category: 'internacional' },
 ]
 
 export async function syncSeasons() {
