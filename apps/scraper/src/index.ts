@@ -1,11 +1,12 @@
-import { syncSeasons }     from './jobs/seasons'
-import { syncTeams }       from './jobs/teams'
-import { syncPlayers }     from './jobs/players'
-import { syncStandings }   from './jobs/standings'
-import { syncFixtures }    from './jobs/fixtures'
+import { syncSeasons }    from './jobs/seasons'
+import { syncTeams }      from './jobs/teams'
+import { syncPlayers }    from './jobs/players'
+import { syncStandings }  from './jobs/standings'
+import { syncFixtures }   from './jobs/fixtures'
 import { syncMatchDetail } from './jobs/match-detail'
-import { closeBrowser }    from './sources/sofascore'
-import { log }             from './logger'
+import { syncHistorical } from './jobs/historical'
+import { closeBrowser }   from './sources/sofascore'
+import { log }            from './logger'
 
 const job = process.argv[2] || 'all'
 const arg = process.argv[3]
@@ -20,6 +21,10 @@ async function main() {
     if (job === 'all' || job === 'standings') await syncStandings()
     if (job === 'all' || job === 'fixtures')  await syncFixtures()
     if (job === 'match-detail' && arg)        await syncMatchDetail(parseInt(arg))
+    if (job === 'historical') {
+      const fromYear = arg ? parseInt(arg) : 2020
+      await syncHistorical(fromYear)
+    }
     log('main', '✅ Completado')
   } finally {
     await closeBrowser()
