@@ -11,6 +11,8 @@ const TOURNAMENTS = [
   { sofascoreId: 26301, slug: 'primera-division-femenina', name: 'Liga AUF Femenina'        },
   { sofascoreId: 31832, slug: 'copa-de-la-liga',           name: 'Copa de la Liga'           },
   { sofascoreId: 21284, slug: 'primera-division-reservas', name: 'Primera División Reservas' },
+  { sofascoreId: 384, slug: 'copa-libertadores',  name: 'Copa Libertadores'  },
+  { sofascoreId: 480, slug: 'copa-sudamericana',  name: 'Copa Sudamericana'  },
 ]
 
 async function upsertTeamBasic(teamData: any, gender: string) {
