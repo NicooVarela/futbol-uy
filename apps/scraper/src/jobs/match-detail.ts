@@ -1,5 +1,4 @@
 import prisma from '../db'
-import { getEvent, getLastEvents } from '../sources/sofascore'
 import { log, logError } from '../logger'
 import { chromium } from 'playwright'
 

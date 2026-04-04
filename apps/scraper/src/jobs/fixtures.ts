@@ -5,6 +5,7 @@ import { log, logError } from '../logger'
 async function upsertEvent(e: any, seasonId: number, season?: any) {
   const homeTeam = await prisma.team.findUnique({ where: { sofascoreId: e.homeTeam.id } })
   const awayTeam = await prisma.team.findUnique({ where: { sofascoreId: e.awayTeam.id } })
+  const gender = season?.tournament?.gender ?? 'M'
 
   // Si el equipo no existe lo creamos básico
   let homeTeamId = homeTeam?.id
@@ -16,15 +17,15 @@ async function upsertEvent(e: any, seasonId: number, season?: any) {
     const t = await prisma.team.upsert({
       where:  { sofascoreId: e.homeTeam.id },
       update: {},
-      create: {
-        sofascoreId: e.homeTeam.id,
-        name:        e.homeTeam.name,
-        slug,
-        shortName:   e.homeTeam.shortName ?? null,
-        nameCode:    e.homeTeam.nameCode ?? null,
-        gender:      'F',
-      },
-    })
+        create: {
+          sofascoreId: e.homeTeam.id,
+          name:        e.homeTeam.name,
+          slug,
+          shortName:   e.homeTeam.shortName ?? null,
+          nameCode:    e.homeTeam.nameCode ?? null,
+          gender,
+        },
+      })
     homeTeamId = t.id
   }
 
@@ -34,15 +35,15 @@ async function upsertEvent(e: any, seasonId: number, season?: any) {
     const t = await prisma.team.upsert({
       where:  { sofascoreId: e.awayTeam.id },
       update: {},
-      create: {
-        sofascoreId: e.awayTeam.id,
-        name:        e.awayTeam.name,
-        slug,
-        shortName:   e.awayTeam.shortName ?? null,
-        nameCode:    e.awayTeam.nameCode ?? null,
-        gender:      'F',
-      },
-    })
+        create: {
+          sofascoreId: e.awayTeam.id,
+          name:        e.awayTeam.name,
+          slug,
+          shortName:   e.awayTeam.shortName ?? null,
+          nameCode:    e.awayTeam.nameCode ?? null,
+          gender,
+        },
+      })
     awayTeamId = t.id
   }
 
@@ -97,7 +98,7 @@ export async function syncFixtures() {
             const events = await getLastEvents(season.tournament.sofascoreId, season.sofascoreId, page)
             if (!events.length) break
             for (const e of events) {
-              await upsertEvent(e, season.id)
+              await upsertEvent(e, season.id, season)
               records++
             }
           } catch (err: any) {

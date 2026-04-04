@@ -52,12 +52,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const match = await getMatch(parseInt(id))
   if (!match) notFound()
 
-  const homeIncidents = match.incidents.filter(i => i.teamSide === 'home')
-  const awayIncidents = match.incidents.filter(i => i.teamSide === 'away')
   const homeStarters = match.lineups.filter(l => l.teamSide === 'home' && l.isStarter)
   const awayStarters = match.lineups.filter(l => l.teamSide === 'away' && l.isStarter)
   const homeSubs = match.lineups.filter(l => l.teamSide === 'home' && !l.isStarter)
   const awaySubs = match.lineups.filter(l => l.teamSide === 'away' && !l.isStarter)
+  const tournamentHref = `/torneo/${match.season.tournament.slug}?season=${match.season.year}`
 
   const isFinished = match.status === 'finished'
   const isLive = match.status === 'inprogress'
@@ -73,7 +72,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
         {/* BREADCRUMB */}
         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 16 }}>
-          <Link href="/">Inicio</Link> / <Link href="/torneo/primera-division">{match.season.tournament.name}</Link> / Fecha {match.round}
+          <Link href="/">Inicio</Link> / <Link href={tournamentHref}>{match.season.tournament.name}</Link> / Fecha {match.round}
         </div>
 
         {/* HERO DEL PARTIDO */}

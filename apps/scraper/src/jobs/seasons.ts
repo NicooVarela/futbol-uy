@@ -39,11 +39,14 @@ export async function syncSeasons() {
       const seasons = await getSeasons(t.sofascoreId)
       const currentYear = new Date().getFullYear().toString()
       const lastYear = (new Date().getFullYear() - 1).toString()
+      const activeSeason =
+        seasons.find((s: any) => s.year === currentYear) ??
+        seasons.find((s: any) => s.year === lastYear) ??
+        seasons[0]
 
       for (const s of seasons) {
         // Es la temporada más reciente del torneo
-        const isCurrent = s.year === currentYear || 
-          (s.year === lastYear && !seasons.some((other: any) => other.year === currentYear))
+        const isCurrent = s.id === activeSeason?.id
 
         await prisma.season.upsert({
           where:  { sofascoreId: s.id },
@@ -61,7 +64,10 @@ export async function syncSeasons() {
 
       // Marcar solo la actual como isCurrent
       await prisma.season.updateMany({
-        where: { tournamentId: tournament.id, sofascoreId: { not: seasons.find((s: any) => s.year === currentYear)?.id } },
+        where: {
+          tournamentId: tournament.id,
+          sofascoreId: { not: activeSeason?.id ?? -1 },
+        },
         data:  { isCurrent: false },
       })
 
