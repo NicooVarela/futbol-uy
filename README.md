@@ -1,159 +1,308 @@
-# Turborepo starter
+# FutbolUY
 
-This Turborepo starter is maintained by the Turborepo core team.
+Monorepo para recopilar y mostrar datos del futbol uruguayo e internacional con foco en torneos vinculados a Uruguay.
 
-## Using this example
+El proyecto tiene dos piezas principales:
 
-Run the following command:
+- `apps/scraper`: ingesta datos desde SofaScore y los guarda en PostgreSQL.
+- `apps/web`: frontend en Next.js que lee la base con Prisma y renderiza tablas, fixtures, clubes y partidos.
 
-```sh
-npx create-turbo@latest
+## Resumen rapido
+
+- Stack: `Next.js 15`, `React 19`, `TypeScript`, `Prisma`, `PostgreSQL`, `Turborepo`, `Playwright`.
+- Base de datos: PostgreSQL local via Docker.
+- Fuente actual de datos: API pública de SofaScore, consumida con un contexto real de navegador.
+- Dominio modelado: torneos, temporadas, equipos, estadios, jugadores, partidos, incidencias, formaciones y tablas.
+
+## Estructura del repo
+
+```text
+.
+├── apps/
+│   ├── scraper/     # jobs de sincronizacion y acceso a SofaScore
+│   └── web/         # app publica en Next.js
+├── packages/
+│   ├── db/          # Prisma schema, cliente y scripts de DB
+│   ├── types/       # tipos compartidos
+│   ├── eslint-config/
+│   └── typescript-config/
+├── docker-compose.yml
+├── package.json
+└── turbo.json
 ```
 
-## What's inside?
+## Como funciona
 
-This Turborepo includes the following packages/apps:
+1. El scraper consulta SofaScore.
+2. Normaliza y guarda la informacion en PostgreSQL.
+3. La web consulta la base con Prisma.
+4. Next.js revalida las paginas cada cierto tiempo (`revalidate`).
 
-### Apps and Packages
+## Requisitos
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- `Node.js >= 18`
+- `npm >= 10`
+- `Docker` y `docker compose`
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Variables de entorno
 
-### Utilities
+Archivo base:
 
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+cp .env.example .env
 ```
 
-Without global `turbo`, use your package manager:
+Variables clave:
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```env
+DATABASE_URL="postgresql://futboluy:futboluy_local@localhost:5432/futboluy"
+SCRAPER_DELAY_MS=2000
+NEXTAUTH_URL=http://localhost:3000
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Notas:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- `apps/web/.env.local` puede usarse para desarrollo local del frontend.
+- `.env` y `.env.local` estan ignorados por git.
+- Cloudinary, Upstash y NextAuth aparecen preparados, pero hoy no hay uso visible en el codigo principal.
 
-```sh
-turbo build --filter=docs
+## Primer arranque
+
+### 1. Instalar dependencias
+
+```bash
+npm install
 ```
 
-Without global `turbo`:
+### 2. Levantar PostgreSQL
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+docker compose up -d
 ```
 
-### Develop
+### 3. Generar cliente Prisma
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+npm run db:generate --workspace @futbol-uy/db
 ```
 
-Without global `turbo`, use your package manager:
+### 4. Crear la base
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+Opcion recomendada para desarrollo con migraciones:
+
+```bash
+npm run db:migrate --workspace @futbol-uy/db
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Alternativa si solo queres empujar el schema:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
+```bash
+npm run db:push --workspace @futbol-uy/db
 ```
 
-Without global `turbo`:
+### 5. Cargar datos iniciales
 
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+npm run dev --workspace @futbol-uy/scraper
 ```
 
-### Remote Caching
+O correr jobs puntuales:
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+npx tsx apps/scraper/src/index.ts seasons
+npx tsx apps/scraper/src/index.ts teams
+npx tsx apps/scraper/src/index.ts players
+npx tsx apps/scraper/src/index.ts standings
+npx tsx apps/scraper/src/index.ts fixtures
 ```
 
-Without global `turbo`, use your package manager:
+### 6. Levantar la web
 
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+npm run dev --workspace @futbol-uy/web
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+Abrir [http://localhost:3000](http://localhost:3000)
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## Scripts utiles
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Raiz del monorepo
 
-```sh
-turbo link
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run check-types
+npm run format
 ```
 
-Without global `turbo`:
+### Web
 
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+```bash
+npm run dev --workspace @futbol-uy/web
+npm run build --workspace @futbol-uy/web
+npm run start --workspace @futbol-uy/web
+npm run lint --workspace @futbol-uy/web
+npm run check-types --workspace @futbol-uy/web
 ```
 
-## Useful Links
+### Scraper
 
-Learn more about the power of Turborepo:
+```bash
+npm run dev --workspace @futbol-uy/scraper
+npm run build --workspace @futbol-uy/scraper
+node apps/scraper/dist/index.js all
+```
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+### Base de datos
+
+```bash
+npm run db:generate --workspace @futbol-uy/db
+npm run db:migrate --workspace @futbol-uy/db
+npm run db:push --workspace @futbol-uy/db
+npm run db:studio --workspace @futbol-uy/db
+```
+
+## Jobs del scraper
+
+Entrada principal:
+
+```bash
+npx tsx apps/scraper/src/index.ts <job> [arg]
+```
+
+Jobs disponibles:
+
+- `all`: corre `seasons`, `teams`, `players`, `standings` y `fixtures`.
+- `sync`: hoy hace lo mismo que `all`.
+- `seasons`: sincroniza torneos y temporadas.
+- `teams`: sincroniza equipos y estadios.
+- `players`: sincroniza planteles.
+- `standings`: sincroniza tablas por grupo.
+- `fixtures`: sincroniza ultimos y proximos partidos.
+- `match-detail <sofascoreEventId>`: trae incidencias y formaciones de un partido.
+- `historical [fromYear]`: carga historico desde cierto anio. Ejemplo: `historical 2020`.
+
+Ejemplos:
+
+```bash
+npx tsx apps/scraper/src/index.ts all
+npx tsx apps/scraper/src/index.ts match-detail 15635513
+npx tsx apps/scraper/src/index.ts historical 2022
+```
+
+## Paginas de la web
+
+- `/`: portada con partidos recientes y tabla principal.
+- `/torneo/[slug]`: vista de torneo, temporada, tabla y fixture.
+- `/club/[slug]`: ficha de club, plantel y ultimos partidos.
+- `/partido/[id]`: detalle de partido, incidencias y formaciones.
+
+## Prisma y datos
+
+Schema principal: [`packages/db/prisma/schema.prisma`](/Users/nico/Desktop/futbol-uy/packages/db/prisma/schema.prisma)
+
+Entidades mas importantes:
+
+- `Tournament`
+- `Season`
+- `Team`
+- `Player`
+- `Event`
+- `Standing`
+- `Incident`
+- `Lineup`
+- `ScraperLog`
+
+## Flujo recomendado de trabajo
+
+Para desarrollo normal:
+
+```bash
+docker compose up -d
+npm install
+npm run db:migrate --workspace @futbol-uy/db
+npx tsx apps/scraper/src/index.ts all
+npm run dev --workspace @futbol-uy/web
+```
+
+Cuando cambies el schema de Prisma:
+
+```bash
+npm run db:migrate --workspace @futbol-uy/db
+npm run db:generate --workspace @futbol-uy/db
+```
+
+Cuando quieras refrescar un partido puntual:
+
+```bash
+npx tsx apps/scraper/src/index.ts match-detail <id>
+```
+
+## Estado actual del proyecto
+
+Fortalezas:
+
+- Buena separacion entre ingesta, base y frontend.
+- Modelo de datos bastante completo para un vertical deportivo.
+- Uso correcto de Prisma y de Server Components para leer datos.
+- `check-types` actualmente pasa.
+
+Limitaciones conocidas:
+
+- El `README` del starter fue reemplazado por este documento, pero los README internos todavia no estan actualizados.
+- `lint` no corre hoy porque falta instalar/configurar `eslint` como dependencia efectiva del workspace.
+- El scraper depende de una integracion fragil con una API no oficial.
+- Hay bastante UI inline y poca abstraccion reusable en la app web.
+- No hay tests automatizados.
+
+## Siguientes mejoras sugeridas
+
+- Dejar `lint` funcionando de punta a punta.
+- Agregar scripts root para Prisma y scraping frecuente.
+- Centralizar helpers de formato de fecha/hora y colores por zona.
+- Reducir `any` en scraper y vistas.
+- Agregar testing minimo:
+  - unitario para transformaciones del scraper
+  - integracion para consultas Prisma criticas
+  - smoke tests para paginas principales
+- Documentar mejor el flujo de despliegue y refresh de datos.
+- Separar componentes visuales reutilizables del frontend.
+
+## Troubleshooting
+
+### La web abre pero no muestra datos
+
+- Verifica que PostgreSQL este arriba: `docker compose ps`
+- Verifica migraciones: `npm run db:migrate --workspace @futbol-uy/db`
+- Corre una carga inicial: `npx tsx apps/scraper/src/index.ts all`
+
+### Prisma falla por cliente desactualizado
+
+```bash
+npm run db:generate --workspace @futbol-uy/db
+```
+
+### El scraper falla con SofaScore
+
+- Reintentar con mayor delay:
+
+```bash
+SCRAPER_DELAY_MS=4000 npx tsx apps/scraper/src/index.ts fixtures
+```
+
+- Revisar si cambiaron endpoints o estructura de respuesta.
+
+### `npm run lint` falla
+
+Estado actual esperado: hoy puede fallar porque `eslint` no esta resuelto correctamente en el workspace.
+
+## Archivos importantes
+
+- [`package.json`](/Users/nico/Desktop/futbol-uy/package.json)
+- [`turbo.json`](/Users/nico/Desktop/futbol-uy/turbo.json)
+- [`docker-compose.yml`](/Users/nico/Desktop/futbol-uy/docker-compose.yml)
+- [`apps/web/app/page.tsx`](/Users/nico/Desktop/futbol-uy/apps/web/app/page.tsx)
+- [`apps/scraper/src/index.ts`](/Users/nico/Desktop/futbol-uy/apps/scraper/src/index.ts)
+- [`apps/scraper/src/sources/sofascore.ts`](/Users/nico/Desktop/futbol-uy/apps/scraper/src/sources/sofascore.ts)
+- [`packages/db/prisma/schema.prisma`](/Users/nico/Desktop/futbol-uy/packages/db/prisma/schema.prisma)
